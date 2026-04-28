@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CorpMinute — CPA Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Calibri, Arial, sans-serif; background: #F3F6FA; color: #1a1a1a; }
+header { background: #1A3A6B; color: #fff; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 20px; font-weight: 700; }
+header span { font-size: 13px; color: #B8D0F0; }
+.container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.stat-card .label { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
+.stat-card .value { font-size: 32px; font-weight: 700; color: #1A3A6B; margin-top: 6px; }
+.card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px; }
+.card h2 { font-size: 16px; color: #1A3A6B; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 12px; background: #EEF3FA; color: #555; font-weight: 600; }
+td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-active { background: #D1FAE5; color: #065F46; }
+.badge-pending { background: #FEF3C7; color: #92400E; }
+.badge-cancelled { background: #FEE2E2; color: #991B1B; }
+.badge-urgent { background: #FEE2E2; color: #991B1B; }
+.badge-soon { background: #FEF3C7; color: #92400E; }
+.badge-ok { background: #D1FAE5; color: #065F46; }
+.btn { display: inline-block; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+.btn-primary { background: #1A3A6B; color: #fff; }
+.btn-outline { background: transparent; color: #1A3A6B; border: 1px solid #1A3A6B; }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-danger { background: #DC2626; color: #fff; }
+form input, form select, form textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; margin-bottom: 12px; font-family: inherit; }
+form label { font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
+.modal.open { display: flex; }
+.modal-box { background: #fff; border-radius: 12px; padding: 28px; width: 560px; max-height: 90vh; overflow-y: auto; }
+.modal-box h3 { font-size: 17px; color: #1A3A6B; margin-bottom: 18px; }
+.flash { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; display: none; }
+.flash-success { background: #D1FAE5; color: #065F46; }
+.flash-error { background: #FEE2E2; color: #991B1B; }
+#loading { display: none; text-align: center; padding: 40px; color: #777; }
+@media (max-width: 700px) {
+  .stats { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  table { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CorpMinute — CPA Dashboard</h1>
+  <span id="cpa-email"></span>
+</header>
+
+<div class="container">
+  <div id="flash" class="flash"></div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Managed Corporations</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Deadlines in 60 Days</div>
+      <div class="value" id="stat-upcoming" style="color:#F59E0B">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Active Subscriptions</div>
+      <div class="value" id="stat-active">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>
+      Managed Corporations
+      <button class="btn btn-primary btn-sm" style="float:right" onclick="openAddModal()">+ Add Corporation</button>
+      <button class="btn btn-outline btn-sm" style="float:right;margin-right:8px" onclick="bulkGenerate()">Generate All Annual Resolutions</button>
+    </h2>
+    <div id="loading">Loading corporations...</div>
+    <table id="corp-table">
+      <thead>
+        <tr>
+          <th>Corporation</th>
+          <th>Province</th>
+          <th>Fiscal Year-End</th>
+          <th>Deadline</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="corp-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Corporation Modal -->
+<div class="modal" id="add-modal">
+  <div class="modal-box">
+    <h3>Add Corporation</h3>
+    <form id="add-form" onsubmit="submitAdd(event)">
+      <div class="grid-2">
+        <div>
+          <label>Corporation Name *</label>
+          <input name="corp_name" required placeholder="Acme Holdings Inc.">
+        </div>
+        <div>
+          <label>Corporation Number</label>
+          <input name="corp_number" placeholder="1234567">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Province *</label>
+          <select name="province" required>
+            <option value="ontario">Ontario</option>
+            <option value="bc">British Columbia</option>
+            <option value="alberta">Alberta</option>
+            <option value="federal">Federal (CBCA)</option>
+            <option value="quebec">Quebec</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Fiscal Year-End *</label>
+          <input name="fiscal_year_end" type="date" required>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Incorporation Date</label>
+          <input name="incorporation_date" type="date">
+        </div>
+        <div>
+          <label>Customer Email *</label>
+          <input name="customer_email" type="email" required placeholder="client@example.com">
+        </div>
+      </div>
+      <label>Director(s) (name, one per line)</label>
+      <textarea name="directors_text" rows="3" placeholder="Jane Doe, 123 Main St, Toronto ON&#10;John Smith, 456 Oak Ave, Vancouver BC"></textarea>
+      <label>Shareholder(s) (name | class | shares, one per line)</label>
+      <textarea name="shareholders_text" rows="3" placeholder="Jane Doe | Common | 100&#10;John Smith | Common | 100"></textarea>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="btn btn-outline" onclick="closeModal('add-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add &amp; Generate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const API = '';
+let cpaEmail = '';
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token') || localStorage.getItem('cpa_token');
+  if (!token) { window.location.href = '/login'; return; }
+  localStorage.setItem('cpa_token', token);
+
+  try {
+    const r = await fetch(`${API}/api/cpa/corps`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (r.status === 401) { window.location.href = '/login'; return; }
+    const data = await r.json();
+    cpaEmail = data.cpa_email || '';
+    document.getElementById('cpa-email').textContent = cpaEmail;
+    renderCorps(data.corps);
+  } catch(e) {
+    showFlash('Failed to load data. Please refresh.', 'error');
+  }
+}
+
+function renderCorps(corps) {
+  const tbody = document.getElementById('corp-tbody');
+  tbody.innerHTML = '';
+  let total = 0, upcoming = 0, active = 0;
+
+  for (const [id, corp] of Object.entries(corps)) {
+    total++;
+    if (corp.status === 'active') active++;
+    const days = daysUntil(corp.fiscal_year_end);
+    if (days !== null && days <= 60) upcoming++;
+
+    const deadlineBadge = days === null ? '' :
+      days <= 7 ? `<span class="badge badge-urgent">${days}d — URGENT</span>` :
+      days <= 30 ? `<span class="badge badge-soon">${days}d</span>` :
+      days <= 60 ? `<span class="badge badge-soon">${days}d</span>` :
+      `<span class="badge badge-ok">${days}d</span>`;
+
+    const statusBadge = `<span class="badge badge-${corp.status}">${corp.status}</span>`;
+
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${corp.corp_name}</strong><br><small style="color:#777">${corp.corp_number || ''}</small></td>
+        <td>${provinceLabel(corp.province)}</td>
+        <td>${formatDate(corp.fiscal_year_end)}</td>
+        <td>${deadlineBadge || '—'}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <a class="btn btn-primary btn-sm" href="${API}/api/cpa/download/${id}?token=${localStorage.getItem('cpa_token')}" target="_blank">Download</a>
+          <button class="btn btn-outline btn-sm" onclick="generateOne('${id}','${corp.corp_name}')">Regenerate</button>
+          <button class="btn btn-outline btn-sm" onclick="copyShareLink('${id}')">Share Link</button>
+        </td>
+      </tr>`;
+  }
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-upcoming').textContent = upcoming;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('loading').style.display = 'none';
+}
+
+function daysUntil(fye) {
+  if (!fye) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let d = new Date(fye); d.setFullYear(today.getFullYear());
+  if (d < today) d.setFullYear(today.getFullYear() + 1);
+  return Math.round((d - today) / 86400000);
+}
+
+function formatDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+}
+
+function provinceLabel(p) {
+  return { federal:'Federal', ontario:'Ontario', bc:'BC', alberta:'Alberta', quebec:'Quebec', other:'Other' }[p] || p;
+}
+
+async function generateOne(id, name) {
+  if (!confirm(`Regenerate documents for ${name}?`)) return;
+  const r = await fetch(`${API}/api/cpa/regenerate/${id}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('cpa_token')}` }
+  });
+  showFlash(r.ok ? `Documents regenerated for ${name}.` : 'Regeneration failed.', r.ok ? 'success' : 'error');
+}
+
+async function bulkGenerate() {
+  if (!confirm('Generate annual resolutions for ALL corporations? This will email all clients.')) return;
+  const r = await fetch(`${API}/api/cpa/bulk-generate`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('cpa_token')}` }
+  });
+  const d = await r.json();
+  showFlash(`Generated for ${d.count} corporations.`, 'success');
+}
+
+function copyShareLink(id) {
+  const link = `${window.location.origin}/client/${id}`;
+  navigator.clipboard.writeText(link);
+  showFlash('Client share link copied to clipboard.', 'success');
+}
+
+function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function submitAdd(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+
+  const directors = (fd.get('directors_text') || '').trim().split('\n').filter(Boolean).map(line => {
+    const parts = line.split(','); return { name: parts[0]?.trim() || '', address: parts.slice(1).join(',').trim(), appointed: new Date().toISOString().slice(0,10) };
+  });
+  const shareholders = (fd.get('shareholders_text') || '').trim().split('\n').filter(Boolean).map(line => {
+    const parts = line.split('|'); return { name: parts[0]?.trim() || '', share_class: parts[1]?.trim() || 'Common', quantity: parseInt(parts[2]?.trim() || '100') };
+  });
+
+  const payload = {
+    corp_name: fd.get('corp_name'),
+    corp_number: fd.get('corp_number'),
+    province: fd.get('province'),
+    fiscal_year_end: fd.get('fiscal_year_end'),
+    incorporation_date: fd.get('incorporation_date'),
+    customer_email: fd.get('customer_email'),
+    directors, shareholders,
+    plan: 'cpa', status: 'active',
+  };
+
+  const r = await fetch(`${API}/api/cpa/add-corp`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('cpa_token')}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (r.ok) {
+    closeModal('add-modal');
+    showFlash('Corporation added and documents generated.', 'success');
+    setTimeout(init, 1500);
+  } else {
+    showFlash('Failed to add corporation.', 'error');
+  }
+}
+
+function showFlash(msg, type) {
+  const el = document.getElementById('flash');
+  el.textContent = msg;
+  el.className = `flash flash-${type}`;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+init();
+</script>
+</body>
+</html>
