@@ -56,6 +56,11 @@ async def landing():
     return Path("static/index.html").read_text(encoding="utf-8")
 
 
+@app.get("/blog", response_class=HTMLResponse)
+async def blog():
+    return Path("static/blog.html").read_text(encoding="utf-8")
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     return Path("static/dashboard.html").read_text(encoding="utf-8")
