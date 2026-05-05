@@ -271,7 +271,7 @@ def send_catchup_offer(
     <p>Our <strong>Catch-Up Package</strong> brings your minute book fully up to date — all missing annual
     resolutions, officer elections, and dividend declarations — for a one-time fee of <strong>$149</strong>.</p>
     <div style="text-align:center;margin:28px 0">
-      <a href="https://corpminute.ca" style="background:#1A3A6B;color:#fff;padding:14px 32px;
+      <a href="https://buy.stripe.com/14AeVegq16FF0g0gQldZ608" style="background:#1A3A6B;color:#fff;padding:14px 32px;
          text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">
         Get the $149 Catch-Up Package
       </a>
