@@ -23,7 +23,7 @@ from config import settings
 from schema import Corporation, Director, Officer, Shareholder, save_corp, load_corp, list_active_corps, list_all_corps
 from documents.generator import generate_full_minute_book, docs_to_zip, generate_special_resolution
 from documents.pdf import generate_minute_book_pdf, docx_to_pdf_bytes
-from email_sender import send_welcome_minute_book, send_special_resolution, send_creator_alert
+from email_sender import send_welcome_minute_book, send_special_resolution, send_creator_alert, send_catchup_offer
 from stripe_handler import verify_webhook, handle_payment_succeeded, handle_subscription_deleted, get_mrr
 
 logging.basicConfig(
@@ -323,6 +323,90 @@ td,th{{padding:10px 14px;border:1px solid #ddd;font-size:13px}}</style></head>
 <tr><td>Resolutions Approved</td><td>{'Yes' if corp.resolutions_approved else 'Pending'}</td></tr>
 </table>
 </body></html>"""
+
+
+# ─────────────────────────────────────────────
+# INTERNAL API — Sovereign Auditor agent only
+# ─────────────────────────────────────────────
+def _check_internal_key(x_api_key: str = Header(default="")) -> None:
+    """Dependency that enforces the internal API key."""
+    expected = settings.internal_api_key
+    if not expected or x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid internal API key")
+
+
+@app.get("/api/internal/audit-candidates")
+async def audit_candidates(
+    _: None = Depends(_check_internal_key),
+) -> JSONResponse:
+    """
+    Returns corporations that may need a compliance follow-up:
+    - Have a customer email
+    - Are on the free 'solo' plan or have never generated documents
+    - Were created more than 3 days ago
+    """
+    from datetime import timezone
+    corps = list_all_corps()
+    now = datetime.now(timezone.utc)
+    candidates = []
+
+    for cid, corp in corps.items():
+        if not corp.customer_email:
+            continue
+        if corp.plan not in ("solo", "pending") and corp.last_generated:
+            continue
+        try:
+            created = datetime.fromisoformat(corp.created_at.replace("Z", "+00:00"))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            days_old = (now - created).days
+        except Exception:
+            days_old = 0
+
+        if days_old < 3:
+            continue
+
+        candidates.append({
+            "customer_id": cid,
+            "corp_name": corp.corp_name,
+            "email": corp.customer_email,
+            "plan": corp.plan,
+            "days_since_signup": days_old,
+            "last_generated": corp.last_generated or None,
+            "province": corp.province,
+        })
+
+    return JSONResponse({"candidates": candidates, "total": len(candidates)})
+
+
+@app.post("/api/internal/send-followup")
+async def send_followup(
+    request: Request,
+    _: None = Depends(_check_internal_key),
+) -> JSONResponse:
+    """
+    Sends a Catch-Up Package offer email to a specific corporation.
+    Body: { "customer_id": "...", "years_missing": 2 }
+    """
+    body = await request.json()
+    customer_id = body.get("customer_id", "")
+    years_missing = int(body.get("years_missing", 1))
+
+    corps = list_all_corps()
+    corp = corps.get(customer_id)
+    if not corp:
+        raise HTTPException(status_code=404, detail="Corporation not found")
+    if not corp.customer_email:
+        raise HTTPException(status_code=400, detail="No customer email on file")
+
+    sent = send_catchup_offer(
+        to=corp.customer_email,
+        corp_name=corp.corp_name,
+        years_missing=years_missing,
+    )
+
+    logger.info(f"Auditor follow-up {'sent' if sent else 'FAILED'} to {corp.customer_email} for {corp.corp_name}")
+    return JSONResponse({"sent": sent, "to": corp.customer_email, "corp": corp.corp_name})
 
 
 # ─────────────────────────────────────────────

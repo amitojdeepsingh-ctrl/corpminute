@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("./data"))
     log_dir: Path = Field(default=Path("./logs"))
 
+    # Internal API (for Sovereign Auditor agent)
+    internal_api_key: str = Field(default="")
+
     # Creator
     creator_wallet: str = Field(default="")
 

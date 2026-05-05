@@ -246,6 +246,45 @@ def send_monthly_report(
     return send_email(to=to, subject=subject, html_body=html)
 
 
+def send_catchup_offer(
+    to: str,
+    corp_name: str,
+    years_missing: int,
+) -> bool:
+    """Send a targeted compliance follow-up offering the $149 Catch-Up Package."""
+    subject = f"Is {corp_name}'s minute book up to date? — CorpMinute"
+    html = f"""
+<div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#1A3A6B;padding:24px;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:22px">CorpMinute.ca</h1>
+    <p style="color:#B8D0F0;margin:8px 0 0">Corporate Compliance Alert</p>
+  </div>
+  <div style="padding:32px;background:#fff">
+    <h2 style="color:#1A3A6B">Your minute book may be out of date</h2>
+    <p>Hi,</p>
+    <p>We noticed that <strong>{corp_name}</strong> may be missing up to <strong>{years_missing} year(s)</strong> of annual corporate resolutions.</p>
+    <div style="background:#FFF8E1;border-left:4px solid #F59E0B;padding:16px;margin:16px 0">
+      <strong>Why this matters:</strong> Under the Canada Business Corporations Act and provincial acts,
+      corporations must pass annual resolutions. Missing resolutions can invalidate corporate decisions,
+      create personal liability for directors, and cause issues during audits or business sales.
+    </div>
+    <p>Our <strong>Catch-Up Package</strong> brings your minute book fully up to date — all missing annual
+    resolutions, officer elections, and dividend declarations — for a one-time fee of <strong>$149</strong>.</p>
+    <div style="text-align:center;margin:28px 0">
+      <a href="https://corpminute.ca" style="background:#1A3A6B;color:#fff;padding:14px 32px;
+         text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">
+        Get the $149 Catch-Up Package
+      </a>
+    </div>
+    <p style="font-size:13px;color:#666">Questions? Reply to this email — we're happy to help.</p>
+    <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+    <p style="font-size:11px;color:#aaa">CorpMinute.ca &nbsp;|&nbsp; {settings.from_email}</p>
+  </div>
+</div>
+"""
+    return send_email(to=to, subject=subject, html_body=html)
+
+
 def send_creator_alert(to: str, subject: str, message: str) -> bool:
     html = f"""
 <div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
