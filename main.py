@@ -409,6 +409,33 @@ async def send_followup(
     return JSONResponse({"sent": sent, "to": corp.customer_email, "corp": corp.corp_name})
 
 
+@app.post("/api/internal/seed-test-corp")
+async def seed_test_corp(
+    _: None = Depends(_check_internal_key),
+) -> JSONResponse:
+    """Seed a test corporation for Auditor agent testing. Protected by internal key."""
+    from schema import Director, Officer, Shareholder
+    from datetime import timezone, timedelta
+    customer_id = "71b9b46b-97fa-43af-8466-a7177accbde5"
+    corp = Corporation(
+        corp_name="Amitoj Test Holdings Inc.",
+        corp_number="1234567",
+        province="ontario",
+        incorporation_date="2022-01-15",
+        fiscal_year_end="2024-12-31",
+        customer_email="amitoj.deep.singh@gmail.com",
+        plan="solo",
+        status="pending",
+        notes="Test corporation for Auditor agent",
+        created_at=(datetime.now(timezone.utc) - timedelta(days=10)).isoformat(),
+        directors=[Director(name="Amitoj Singh", address="123 Test St, Toronto ON M5V 1A1", appointed="2022-01-15")],
+        officers=[Officer(name="Amitoj Singh", role="President", appointed="2022-01-15")],
+        shareholders=[Shareholder(name="Amitoj Singh", share_class="Common", quantity=100)],
+    )
+    save_corp(customer_id, corp)
+    return JSONResponse({"ok": True, "customer_id": customer_id, "corp_name": corp.corp_name})
+
+
 # ─────────────────────────────────────────────
 # HEALTH CHECK
 # ─────────────────────────────────────────────
