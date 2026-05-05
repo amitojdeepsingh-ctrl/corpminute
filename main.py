@@ -335,42 +335,6 @@ def _check_internal_key(x_api_key: str = Header(default="")) -> None:
         raise HTTPException(status_code=401, detail="Invalid internal API key")
 
 
-@app.post("/api/internal/seed-test-corp")
-async def seed_test_corp(
-    request: Request,
-    _: None = Depends(_check_internal_key),
-) -> JSONResponse:
-    """Creates a test corporation for Auditor agent testing. Idempotent."""
-    body = await request.json()
-    customer_email = body.get("email", "")
-    if not customer_email:
-        raise HTTPException(status_code=400, detail="email required")
-
-    # Check if test corp already exists
-    corps = list_all_corps()
-    for cid, corp in corps.items():
-        if corp.corp_name == "Amitoj Test Holdings Inc.":
-            return JSONResponse({"created": False, "customer_id": cid, "message": "Already exists"})
-
-    customer_id = str(uuid.uuid4())
-    corp = Corporation(
-        corp_name="Amitoj Test Holdings Inc.",
-        corp_number="ON-1234567",
-        province="ontario",
-        incorporation_date="2022-01-15",
-        fiscal_year_end="2024-12-31",
-        customer_email=customer_email,
-        plan="solo",
-        status="pending",
-        created_at="2026-04-20T10:00:00",
-        directors=[Director(name="Amitoj Singh", address="123 Test St, Toronto ON", appointed="2022-01-15")],
-        officers=[Officer(name="Amitoj Singh", role="President", appointed="2022-01-15")],
-        shareholders=[Shareholder(name="Amitoj Singh", share_class="Common", quantity=100)],
-    )
-    save_corp(customer_id, corp)
-    return JSONResponse({"created": True, "customer_id": customer_id})
-
-
 @app.get("/api/internal/audit-candidates")
 async def audit_candidates(
     _: None = Depends(_check_internal_key),
