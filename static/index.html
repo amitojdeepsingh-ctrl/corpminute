@@ -68,6 +68,20 @@ nav { background: #fff; border-bottom: 1px solid #eee; padding: 0 5%; display: f
 .btn-plan-primary { background: #1A3A6B; color: #fff; }
 .btn-plan-outline { background: #fff; color: #1A3A6B; border: 2px solid #1A3A6B; }
 
+/* Scout Services */
+.services-section { background: #F8FAFF; border-top: 1px solid #E5EDF8; padding: 80px 5%; }
+.services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 36px; }
+.service-card { background: #fff; border: 1px solid #E5EDF8; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow .2s; }
+.service-card:hover { box-shadow: 0 4px 20px rgba(26,58,107,.1); }
+.service-card-title { font-size: 15px; font-weight: 700; color: #0F2553; }
+.service-card-desc { font-size: 13px; color: #666; line-height: 1.6; flex: 1; }
+.service-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.service-card-price { font-size: 18px; font-weight: 800; color: #1A3A6B; }
+.service-card-cta { background: #1A3A6B; color: #fff; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.service-card-cta:hover { background: #0F2553; }
+.services-loading { text-align: center; color: #999; font-size: 14px; padding: 40px; }
+.services-ai-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); color: #3B82F6; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+
 /* Compliance callout */
 .callout { background: #FFF8E1; border: 1px solid #F59E0B; border-radius: 12px; padding: 28px 32px; margin: 0 5% 60px; }
 .callout h3 { color: #92400E; font-size: 17px; margin-bottom: 8px; }
@@ -91,6 +105,7 @@ footer .disclaimer { max-width: 700px; margin: 0 auto; }
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
     <a href="#cpa">For CPAs</a>
+    <a href="#services">Services</a>
   </div>
   <a class="nav-cta" href="https://buy.stripe.com/eVq4gAa1Dd439QAgQldZ60a">Get Started — $25/mo</a>
 </nav>
@@ -228,6 +243,16 @@ footer .disclaimer { max-width: 700px; margin: 0 auto; }
   </div>
 </section>
 
+<section class="services-section" id="services" style="display:none">
+  <div class="services-ai-badge">🤖 AI-Powered Services</div>
+  <div class="section-label">Expert Add-Ons</div>
+  <h2 style="color:#0F2553;font-size:clamp(22px,3.5vw,38px);font-weight:800;margin-bottom:12px">Professional Corporate Services</h2>
+  <p style="color:#555;font-size:16px;max-width:600px;line-height:1.7">On-demand legal and compliance services, powered by AI. Pay once, get your document fast.</p>
+  <div class="services-grid" id="services-grid">
+    <div class="services-loading">Loading available services…</div>
+  </div>
+</section>
+
 <div class="callout">
   <h3>⚠️ Is your corporation compliant?</h3>
   <p>Every incorporated Canadian business is legally required to maintain annual resolutions under the Canada Business Corporations Act (CBCA) and provincial equivalents. Failure to do so can jeopardize your corporate shield, complicate due diligence during a sale or financing, and result in CRA penalties. Most small business owners don't know — until it's expensive to fix.</p>
@@ -241,5 +266,35 @@ footer .disclaimer { max-width: 700px; margin: 0 auto; }
   </p>
 </footer>
 
+<script>
+(function () {
+  const API = 'https://sovereign-production-7932.up.railway.app/public/services';
+  const section = document.getElementById('services');
+  const grid = document.getElementById('services-grid');
+
+  fetch(API)
+    .then(r => r.json())
+    .then(data => {
+      const services = (data.services || []).filter(s => s && s.paymentUrl);
+      if (!services.length) return; // hide section if nothing to show
+      section.style.display = '';
+      grid.innerHTML = services.map(s => `
+        <div class="service-card">
+          <div class="service-card-title">${escHtml(s.title)}</div>
+          ${s.description ? `<div class="service-card-desc">${escHtml(s.description)}</div>` : ''}
+          <div class="service-card-footer">
+            <span class="service-card-price">${escHtml(s.price || '')}</span>
+            <a class="service-card-cta" href="${escHtml(s.paymentUrl)}" target="_blank" rel="noopener">Book Now →</a>
+          </div>
+        </div>
+      `).join('');
+    })
+    .catch(() => {}); // fail silently — section stays hidden
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
 </body>
 </html>
